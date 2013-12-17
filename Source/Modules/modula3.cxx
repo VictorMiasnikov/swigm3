@@ -221,6 +221,7 @@ private:
    */
 
   Hash *enum_coll;	//Collection of all enumerations.
+  int enumAnon;
 
   String *constant_values;
   String *constantfilename;
@@ -286,6 +287,7 @@ MODULA3():
       enumeration_items(NULL),
       enumeration_max(0),
       enumeration_coll(NULL),
+      enumAnon(1),
       constant_values(NULL),
       constantfilename(NULL),
       renamefilename(NULL),
@@ -305,13 +307,6 @@ MODULA3():
   }
 
   /************** some utility functions ***************/
-
-  void dbg(const char* fmt, ...) {
-    va_list args;
-    va_start(args,fmt);
-    vprintf(fmt,args);
-    va_end(args);
-  }
 
   /* -----------------------------------------------------------------------------
    * getMappedType()
@@ -392,7 +387,6 @@ MODULA3():
 
   bool isInParam(Node *p) {
     String *dir = Getattr(p, "tmap:m3wrapargdir");
-//dbg("dir for %s: %s\n", Char(Getattr(p,"name")), Char(dir));
     if ((dir == NIL) || (Strcmp(dir, "in") == 0)
 	|| (Strcmp(dir, "inout") == 0)) {
       return true;
@@ -433,7 +427,6 @@ MODULA3():
    *
    * Check if a string have a given prefix.
    * ----------------------------------------------------------------------------- */
-   
   bool hasPrefix(const String *str, const String *prefix) {
     int len_prefix = Len(prefix);
     return (Len(str) > len_prefix)
@@ -471,7 +464,6 @@ MODULA3():
       }
       n = parentNode(n);
     }
-    //dbg("qualified name: %s\n", Char(name));
     return name;
   }
 #endif
@@ -482,7 +474,6 @@ MODULA3():
    * Turn usual C identifiers like "this_is_an_identifier"
    * into usual Modula 3 identifier like "thisIsAnIdentifier"
    * ----------------------------------------------------------------------------- */
-   
   String *nameToModula3(const String *sym, bool leadingCap) {
     int len_sym = Len(sym);
     char *csym = Char(sym);
@@ -519,7 +510,6 @@ MODULA3():
    *
    * Make the first character upper case.
    * ----------------------------------------------------------------------------- */
-   
   String *capitalizeFirst(const String *str) {
     return NewStringf("%c%s", toupper(*Char(str)), Char(str) + 1);
   }
@@ -532,7 +522,6 @@ MODULA3():
    * then it is replaced by the 'newprefix'.
    * The rest is converted to Modula style.
    * ----------------------------------------------------------------------------- */
-   
   String *prefixedNameToModula3(Node *n, const String *sym, bool leadingCap) {
     String *oldPrefix = Getattr(n, "feature:modula3:oldprefix");
     String *newPrefix = Getattr(n, "feature:modula3:newprefix");
@@ -571,7 +560,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   File *openWriteFile(String *name) {
-
     File *file = NewFile(name, "w", SWIG_output_files());
     if (!file) {
       FileErrorDisplay(name);
@@ -615,9 +603,7 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   bool evalExpr(String *value, long &numvalue) {
-
     // Split changes file status of String and thus cannot receive 'const' strings
-//dbg("evaluate <%s>\n", Char(value));
     List *summands = Split(value, '+', INT_MAX);
     Iterator sm = First(summands);
     numvalue = 0;
@@ -626,18 +612,15 @@ MODULA3():
       long smnumvalue;
       if (smvalue != NIL) {
 	if (!strToL(smvalue, smnumvalue)) {
-//dbg("evaluation: abort 0 <%s>\n", Char(smvalue));
 	  return false;
 	}
       } else {
 	if (!strToL(sm.item, smnumvalue)) {
-//dbg("evaluation: abort 1 <%s>\n", Char(sm));
 	  return false;
 	}
       }
       numvalue += smnumvalue;
     }
-//dbg("evaluation: return %ld\n", numvalue);
     return true;
   }
 
@@ -669,7 +652,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   bool equalNilStr(const String *str0, const String *str1) {
-
     if (str0 == NIL) {
       return (str1 == NIL);
     } else {
@@ -678,7 +660,6 @@ MODULA3():
   }
 
   struct writeArgState {
-
     String *mode, *name, *type, *value;
     bool hold;
      writeArgState():mode(NIL), name(NIL), type(NIL), value(NIL), hold(false) {
@@ -717,51 +698,6 @@ MODULA3():
     state.type = type;
     state.value = value;
   }
-
-
-//can delete this eventually
-
- void DebugEnums() {
-
-    dbg("debugenums start\n\n");
-
-    for (Iterator it2 = First(enum_coll); it2.key != NIL; it2 = Next(it2)) {
-
-      Hash *h = it2.item;
-
-      String *proper = Getattr(h,"proper");
-      List *enumList = Getattr(h,"order");
-
-//      dbg("min %s max %s proper %s\n",Char(min),Char(max),Char(proper));
-
-      Hash *theEnums = Getattr(h,"enums");
-
-      //the proper enums translate directly to M3 ones
-      if (Strcmp(proper,"1") == 0) {
-
-          //random order
-        for (Iterator el = First(theEnums); el.item != NIL; el = Next(el)) {
-          String *name = NewString(el.key);
-          String *value = NewString(el.item);
-
-         dbg("debugenums proper name %s : value %s\n",Char(name),Char(value));
-       }
-
-      } else {
-        //improper enums
-
-        for (Iterator el = First(enumList); el.item != NIL; el = Next(el)) {
-          String *name = NewString(el.item);
-          String *value = Getattr(theEnums,name);
-
-          dbg("debugenums improper name %s : value %s\n",Char(name),Char(value));
-        }
-
-      }
-
-    }
-  } //DebugEnums
-
 
   /* -----------------------------------------------------------------------------
    * getProxyName()
@@ -856,7 +792,6 @@ MODULA3():
    * --------------------------------------------------------------------- */
 
   virtual int top(Node *n) {
-
     if (hasContent(constantfilename) || hasContent(renamefilename) || hasContent(typemapfilename)) {
       int result = SWIG_OK;
       if (hasContent(constantfilename)) {
@@ -875,10 +810,8 @@ MODULA3():
   }
 
   void scanConstant(File *file, Node *n) {
-
     Node *child = firstChild(n);
     while (child != NIL) {
-
       String *constname = NIL;
       String *type = nodeType(child);
       if ((Strcmp(type, "enumitem") == 0)
@@ -902,7 +835,6 @@ MODULA3():
   }
 
   int generateConstantTop(Node *n) {
-
     File *file = openWriteFile(NewStringf("%s.c", constantfilename));
     if (CPlusPlus) {
       Printf(file, "#include <cstdio>\n");
@@ -923,7 +855,6 @@ MODULA3():
   }
 
   void scanRename(File *file, Node *n) {
-
     Node *child = firstChild(n);
     while (child != NIL) {
       String *type = nodeType(child);
@@ -947,7 +878,6 @@ MODULA3():
   }
 
   int generateRenameTop(Node *n) {
-
     File *file = openWriteFile(NewStringf("%s.i", renamefilename));
     Printf(file, "\
 /* This file was generated from %s\n\
@@ -959,11 +889,9 @@ MODULA3():
   }
 
   void scanTypemap(File *file, Node *n) {
-
     Node *child = firstChild(n);
     while (child != NIL) {
       String *type = nodeType(child);
-      //dbg("nodetype %s\n", Char(type));
       String *storage = Getattr(child, "storage");
       if ((Strcmp(type, "class") == 0) || ((Strcmp(type, "cdecl") == 0) && (storage != NIL)
 					   && (Strcmp(storage, "typedef") == 0))) {
@@ -979,7 +907,6 @@ MODULA3():
   }
 
   int generateTypemapTop(Node *n) {
-
     File *file = openWriteFile(NewStringf("%s.i", typemapfilename));
     Printf(file, "\
 /* This file was generated from %s\n\
@@ -991,7 +918,6 @@ MODULA3():
   }
 
   int generateM3Top(Node *n) {
-
     /* Initialize all of the output files */
     outfile = Getattr(n, "outfile");
 
@@ -1106,7 +1032,7 @@ MODULA3():
 
     // Generate the raw interface
     {
-      File *file = openWriteFile(NewStringf("%s%s.i3", SWIG_output_directory(), m3raw_name));;
+      File *file = openWriteFile(NewStringf("%s%s.i3", SWIG_output_directory(), m3raw_name));
 
       emitBanner(file);
 
@@ -1166,7 +1092,6 @@ MODULA3():
 	  Printf(file, "\n");
 	  emitEnumeration(file, it.key, it.item);
 	}
-
       }
 
       // Add the wrapper methods
@@ -1310,7 +1235,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int functionWrapper(Node *n) {
-
     String *type = nodeType(n);
     String *funcType = Getattr(n, "modula3:functype");
     String *rawname = Getattr(n, "name");
@@ -1319,17 +1243,10 @@ MODULA3():
     String *staticMember = Getattr(n,"staticmemberfunctionHandler:storage");
     //String *wname = Swig_name_wrapper(symname)
 
-    //dbg("functionWrapper capname: %s rawname: %s symname: %s \n", Char(capname),Char(rawname),Char(symname));
-
-    //dbg("function: %s type%s\n", Char(symname),Char(type));
-    //dbg(" purpose: %s\n", Char(funcType));
-
     //static members lets lose the class prefix
-
     String *staticName = Getattr(n,"staticmemberfunctionHandler:sym:name");
     if (staticName != NIL) {
       capname = capitalizeFirst(staticName);
-      //dbg("static name %s\n",Char(capname)); //link errors??
     }
 
     if (Strcmp(type, "cdecl") == 0) {
@@ -1359,12 +1276,10 @@ MODULA3():
 	}
 
       } else if (Strcmp(funcType, "method") == 0) {
-
 	Setattr(n, "modula3:funcname", capname);
 	emitCWrapper(n, capname);
 	emitM3RawPrototype(n, capname, capname);
 	emitM3Wrapper(n, capname);
-
       } else if (Strcmp(funcType, "accessor") == 0) {
 	/*
 	 * Generate the proxy class properties for public member variables.
@@ -1393,32 +1308,19 @@ MODULA3():
     } else if (Strcmp(type, "constructor") == 0) {
 
       String *oname = Getattr(n, "sym:overname");
-
-      //the symname is of form new_xxx  - check if the xxx has been renamed from the class
-      //what does this achieve??  they were used to do the rename but broke
-      //char *underscore = strchr(Char(symname), '_');
-      //String *baseconstr = NewString(underscore + 1);
       String *capname_e;
-
       String *constr_name = Getattr(n,"constructorDeclaration:sym:name");
 
-//dbg("functionwrapper constr test constr_name %s baseconstr %s oname %s \n",Char(constr_name),Char(baseconstr), Char(oname));
-
-      //if (Strcmp(constr_name,baseconstr) == 0) { //was rawname
-      if (Strcmp(constr_name,rawname) == 0) { //put it back to fix it
+      if (Strcmp(constr_name,rawname) == 0) {
         //constructor has not been renamed
         capname_e = NewStringf("%s%s",capname,oname);
-//dbg("functionwrapper constr NOT renamed rawname %s baseconstr %s name1 %s\n",Char(rawname),Char(baseconstr),Char(capname_e));
       } else {
         //constructor has been renamed
         capname_e = NewStringf("%s",capname);
-//dbg("functionwrapper constr IS renamed rawname %s baseconstr %s name1 %s\n",Char(rawname),Char(baseconstr),Char(capname_e));
       }
-
       emitCWrapper(n, capname_e);
       emitM3RawPrototype(n, capname_e, capname_e);
       emitM3Wrapper(n, capname_e);
-
     } else if (Strcmp(type, "destructor") == 0) {
       emitCWrapper(n, capname);
       emitM3RawPrototype(n, capname, capname);
@@ -1437,7 +1339,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int emitCWrapper(Node *n, const String *wname) {
-
     String *rawname = Getattr(n, "name");
     String *c_return_type = NewString("");
     String *cleanup = NewString("");
@@ -1453,8 +1354,6 @@ MODULA3():
     //if abstract method dont emit
     if (abstract) return 0;
 
-    //dbg("emitCWrapper wname:%s symname:%s\n",Char(wname),Char(symname));
-
      //overrides here and in fname below
     String *type = nodeType(n);
     String *oname = Getattr(n, "sym:overname");
@@ -1468,7 +1367,6 @@ MODULA3():
 	return SWIG_ERROR;
       }
     }
-
     // A new wrapper function object
     Wrapper *f = NewWrapper();
 
@@ -1597,8 +1495,7 @@ MODULA3():
 
       // below based on Swig_VargetToFunction()
       SwigType *ty = Swig_wrapped_var_type(Getattr(n, "type"), use_naturalvar_mode(n));
-
-     Setattr(n, "wrap:action", NewStringf("%s = (%s)(%s);", Swig_cresult_name(), SwigType_lstr(ty, 0), Getattr(n, "value")));
+      Setattr(n, "wrap:action", NewStringf("%s = (%s)(%s);", Swig_cresult_name(), SwigType_lstr(ty, 0), Getattr(n, "value")));
     }
 
     Setattr(n, "wrap:name", wname);
@@ -1624,7 +1521,6 @@ MODULA3():
       } else {
 	Swig_warning(WARN_TYPEMAP_OUT_UNDEF, input_file, line_number, "Unable to use return type %s in function %s.\n", SwigType_str(t, 0), rawname);
       }
-
       emit_return_variable(n, t, f);
 
       if (!is_void_return) {
@@ -1635,12 +1531,6 @@ MODULA3():
           Replaceall(c_return_type, "&", "*"); //make pointer return
           Wrapper_add_localv(f, "cresult", c_return_type, "cresult", NIL);
         } else {
-          //we dont init the cresult -- seems to work
-          //were getting c errors if the return type not cast properly but also get c++ errors since dont
-          //know the candidate values for a constructor call if this is a class so lets not init it - tried various inits but none worked
-          //Wrapper_add_localv(f, "cresult", c_return_type, "cresult = result", NIL);
-          //Wrapper_add_localv(f, "cresult", c_return_type, "cresult = 0", NIL);
-          //Wrapper_add_localv(f, "cresult", c_return_type, "cresult = (", c_return_type, ") 0", NIL);
           Wrapper_add_localv(f, "cresult", c_return_type, "cresult", NIL);
         }
       }
@@ -1718,9 +1608,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int emitM3RawPrototype(Node *n, const String *cname, const String *m3name) {
-
-//dbg("emitm3rawprototype cname %s m3name %s \n",Char(cname),Char(m3name));
-
     String *abstract = Getattr(n, "abstract");
     //if abstract method dont emit
     if (abstract) return 0;
@@ -1740,15 +1627,10 @@ MODULA3():
     String *oname = Getattr(n, "sym:overname");
 
     //renames checking
-    //dbg("emitm3rawprototype oname %s\n",Char(oname));
-
     Replaceall(oname, "__SWIG_", "");
     if ((Strcmp(oname,"0") != 0) && (Strcmp(type, "constructor") != 0)) {
       m3name = NewStringf("%s%s",m3name,oname);
-      //dbg("emitm3rawprototype overloaded %s\n",Char(m3name));
     }
-
-    //dbg("emitm3rawprototype m3name %s\n",Char(m3name));
 
     /* Get return types */
     bool has_return;
@@ -1756,9 +1638,6 @@ MODULA3():
       String *tm = getMappedTypeNew(n, "m3rawrettype", "");
       if (tm != NIL) {
 	Printf(im_return_type, "%s", tm);
-
-	//dbg("emitm3rawprototype rawrettype %s\n",Char(im_return_type));
-
 	//add raw ret type imports
         addImports(m3raw_intf.import, "m3rawrettype", n);
       }
@@ -1768,8 +1647,6 @@ MODULA3():
     /* cname is the original name if 'n' denotes a C function
        and it is the relabeled name (sym:name) if 'n' denotes a C++ method or similar */
     m3raw_intf.enterBlock(no_block);
-
-      //dbg("cname %s m3name %s nodetype %s functype %s\n",Char(cname),Char(m3name),Char(type),Char(funcType));
 
       if ((funcType == NIL)  && (Strcmp(type, "cdecl") == 0) && (staticMember == NIL) ) {
         Printf(m3raw_intf.f, "\n<* EXTERNAL %s *>\nPROCEDURE %s (", cname, m3name);
@@ -1856,7 +1733,6 @@ MODULA3():
   }
 
   long getConstNumeric(Node *n) {
-
     String *constnumeric = Getfeature(n, "constnumeric");
     String *name = Getattr(n, "name");
     long numvalue;
@@ -1878,9 +1754,7 @@ MODULA3():
    * Considers node as an integer constant definition
    * and generate a Modula 3 constant definition.
    * ------------------------------------------------------------------------ */
-   
   void generateIntConstant(Node *n, String *name) {
-
     String *value = Getattr(n, "value");
     String *type = Getfeature(n, "modula3:constint:type");
     String *conv = Getfeature(n, "modula3:constint:conv");
@@ -1931,7 +1805,6 @@ MODULA3():
       Printf(m3wrap_intf.f, " = %s;\n", m3value);
       Delete(m3value);
     }
-
   }
 
   /* -----------------------------------------------------------------------
@@ -1940,9 +1813,7 @@ MODULA3():
    * Considers node as a set constant definition
    * and generate a Modula 3 constant definition.
    * ------------------------------------------------------------------------ */
-   
   void generateSetConstant(Node *n, String *name) {
-
     String *value = Getattr(n, "value");
     String *type = Getfeature(n, "modula3:constset:type");
     String *setname = Getfeature(n, "modula3:constset:set");
@@ -2027,12 +1898,10 @@ MODULA3():
   }
 
   void generateConstant(Node *n) {
-
     // any of the special interpretation disables the default behaviour
     String *enumitem = Getfeature(n, "modula3:enumitem:name");
     String *constset = Getfeature(n, "modula3:constset:name");
     String *constint = Getfeature(n, "modula3:constint:name");
-
     if (hasContent(enumitem) || hasContent(constset) || hasContent(constint)) {
       if (hasContent(constset)) {
 	generateSetConstant(n, constset);
@@ -2046,7 +1915,6 @@ MODULA3():
       if (name == NIL) {
 	name = Getattr(n, "name");
       }
-
       m3wrap_intf.enterBlock(constant);
       String *m3value;
       if (hasPrefix(value, "0x")) {
@@ -2068,7 +1936,6 @@ MODULA3():
 
       Printf(m3wrap_intf.f, "%s = %s;\n", name, m3value);
     }
-
   }
 
 #if 0
@@ -2085,7 +1952,6 @@ MODULA3():
 #endif
 
   void emitEnumeration(File *file, String *name, Node *n) {
-
     Printf(file, "%s = {", name);
     int i;
     bool gencomma = false;
@@ -2116,9 +1982,6 @@ MODULA3():
    * ------------------------------------------------------------------------ */
 
   virtual int constantWrapper(Node *n) {
-
-    //dbg("in constwrapper(%s)\n", Char(Getattr(n,"name")));
-
     generateConstant(n);
     return SWIG_OK;
   }
@@ -2131,10 +1994,6 @@ MODULA3():
 
   virtual int enumDeclaration(Node *n) {
 
-    //dbg("enumDeclaration\n");
-
-    //printAttrs(n);
-
     int parseErr;
 
     Preprocessor_expr_init();
@@ -2142,18 +2001,21 @@ MODULA3():
     String *ntype = nodeType(n);
     //String *name = Getattr(n, "name");
     String *symName = Getattr(n, "sym:name");
+    //if an anonymous enum give it a name
+    if (symName == NIL) {
+      symName = NewStringf("Enum%d",enumAnon);
+      enumAnon++;
+    }
+
     //if use symname here instead of name then can rename enums
     String *enumName = NewString(symName);
     String *access = Getattr(n, "access");
-
-    //dbg("enumDeclaration name:%s type:%s access;%s\n",       Char(name),Char(ntype),Char(access));
 
     Node *m = parentNode(n);
     String *pntype = nodeType(m);
     String *pname = NIL;
     if (Strcmp(pntype, "class") == 0) {
       pname = Getattr(m, "name");
-      //dbg("enumDeclaration parent class :%s\n",Char(pname));
     }
 
     if (access != NIL) {
@@ -2162,14 +2024,7 @@ MODULA3():
     }
 
     if (Strstr(enumName, "::")) {
-      //dbg("enum has namespace scope :%s\n",Char(enumName));
-
       //ensure pname is defined for the replace below. Namespace is like class scope
-
-      //pname = NewStringf("%s",enumName);
-      //Replaceall(pname, "::", "");
-      //Replaceall(pname, symName, "");
-
       //This fixes imported enums with class extension to look like local enums
       Replaceall(enumName, "::", "_");
     }
@@ -2200,9 +2055,6 @@ MODULA3():
         String *enumValue = Getattr(child, "enumvalue");
         String *enumValueEx = Getattr(child, "enumvalueex");
 
-        //String *value = Getattr(child, "value");
-        //dbg("enums raw: name: %s enumValue %s enumValueEx %s value %s pname %s\n",Char(ename),Char(enumValue),Char(enumValueEx),Char(value),Char(pname));
-
         if (enumValue != NIL) {
 
           //Not a proper enum check if we have seen it before
@@ -2212,7 +2064,6 @@ MODULA3():
           ReplaceEnumVals(thisEnumHash,enumValue,pname);
 
           //this check returns true for both legit hex numbers and syms not defined
-          //if (ContainsAlpha(enumValue)) dbg("prob id-------------\n");
 
           int parseRes = Preprocessor_expr(enumValue, &parseErr);
 
@@ -2235,17 +2086,12 @@ MODULA3():
           */
           String *enumValExCopy = NewString(enumValueEx);
           if (Strstr(enumValExCopy, " + 1")) {
-            //dbg("found + 1 for  :%s\n",Char(enumValueEx));
 
             Replaceall(enumValExCopy, " + 1", "");
-            //dbg("enumValEx after replace :%s:\n",Char(enumValExCopy));
-
             String *symVal = Getattr(thisEnumHash,enumValExCopy);
-            //dbg("attr for enum %s: is %s:\n",Char(enumValExCopy),Char(symVal));
 
             if (symVal != NIL) {
 
-              //dbg("found sym :%s:\n",Char(symVal));
               long theVal = aToL(symVal);
               theVal++;
               String *numstr = NewStringf("%ld",theVal);
@@ -2256,7 +2102,6 @@ MODULA3():
             }
 
           } else {
-            //dbg("did not find + 1 for  :%s\n",Char(enumValueEx));
             //so it must be a value prob 0 so then set its value
             //fixme should parse the value anyway
             Setattr(thisEnumHash, ename, "0");
@@ -2264,7 +2109,6 @@ MODULA3():
         } //enumValueEx not NIL
 
         Append(enumList,ename);
-
         child = nextSibling(child);
       } //while
 
@@ -2272,7 +2116,6 @@ MODULA3():
 
       enumCount = 0;
       for (Iterator el = First(thisEnumHash); el.item != NIL; el = Next(el)) {
-        //String *name = NewString(el.key);
         String *value = NewString(el.item);
 
         long theVal = aToL(value);
@@ -2296,10 +2139,8 @@ MODULA3():
       //this delesthe class prefix from the enum before we print it
       if (pname != NIL) {
         //this removes the class prefix from the enum
-        //check if it still being used
 
         String *classPrefix = NewStringf("%s_",pname);
-        //dbg("classPrefix %s\n",Char(classPrefix));
         Replaceall(enumName, classPrefix, "");
       }
 
@@ -2307,8 +2148,6 @@ MODULA3():
 
       //set this attribute so that later we can generate an assert for the parameter
       Setattr(enumHash,"errconst",errConst);
-
-      //dbg("min %ld max %ld\n",min,max);
 
 //-------------------------------------------------
 
@@ -2319,13 +2158,8 @@ MODULA3():
 
       m3wrap_intf.enterBlock(no_block);
 
-      //helpful dbg stmt for generating tmap macros
-      //dbg("EnumMaps(%s, %s, ErrMode)\n",Char(name),Char(enumName));
-
       //the proper enums translate directly to M3 ones
       if (proper == 1) {
-
-        //dbg("EnumImp(%s, %s, M3QNamespace)\n",Char(name),Char(enumName));
 
         Printf(m3wrap_intf.f, "\nTYPE (* Enum %s *)\n",Char(enumName));
         Printf(m3wrap_intf.f, "  %s = {", enumName);
@@ -2345,8 +2179,6 @@ MODULA3():
           gencomma = true;
 
           Printf(m3wrap_intf.f, " %s", Char(name));
-
-          //dbg("hashes %s \n",Char(name));
        }
 
        Printf(m3wrap_intf.f, "};\n");
@@ -2356,9 +2188,6 @@ MODULA3():
         //the names become constants and the type becomes a subrange
         //from min to max and we set a tmap for a runtime check
 
-        //helpful dbg to generate enummaps for certain i files
-        //dbg("EnumImp(%s, %s&%s_ErrSet, M3QNamespace)\n",Char(name),Char(enumName),Char(enumName));
-
         Printf(m3wrap_intf.f, "\nCONST (* Enum %s *)\n",Char(enumName));
 
         for (Iterator el = First(enumList); el.item != NIL; el = Next(el)) {
@@ -2366,8 +2195,6 @@ MODULA3():
           String *value = Getattr(thisEnumHash,name);
 
           Printf(m3wrap_intf.f, "  %s = %s;\n", Char(name),Char(value));
-
-          //dbg("hashes %s :%s\n",Char(name),Char(value));
         }
 
         /* if the range of values is too large will have to use a Set generic
@@ -2400,15 +2227,12 @@ MODULA3():
           bool gencomma = false;
           for (Iterator el = First(enumList); el.item != NIL; el = Next(el)) {
             String *name = NewString(el.item);
-            //String *value = Getattr(thisEnumHash,name);
 	    if (gencomma) {
 	      Printf(m3wrap_intf.f, ", ");
 	    }
 	    gencomma = true;
             Printf(m3wrap_intf.f, "  %s", Char(name));
-            //dbg("hashes %s :%s\n",Char(name),Char(value));
           }
-
 	  Printf(m3wrap_intf.f, "};\n\n");
         }
       }
@@ -2420,15 +2244,6 @@ MODULA3():
 
    return SWIG_OK;
 
-
-  /* original
-    String *symname = nameToModula3(Getattr(n, "sym:name"), true);
-    enumerationStart(symname);
-    int result = Language::enumDeclaration(n);
-    enumerationStop();
-    Delete(symname);
-    return result;
-  */
   }
 #endif
 
@@ -2439,7 +2254,6 @@ MODULA3():
   virtual int enumvalueDeclaration(Node *n) {
 
     String *acc_str = Getattr(n, "access");
-    //dbg("enumvalueDeclaration access(%s)\n", Char(acc_str));
 
     if (Strcmp(acc_str, "public") == 0) {
       generateConstant(n);
@@ -2472,7 +2286,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   virtual int pragmaDirective(Node *n) {
-
     if (!ImportMode) {
       String *lang = Getattr(n, "lang");
       String *code = Getattr(n, "name");
@@ -2482,7 +2295,6 @@ MODULA3():
 
 	String *strvalue = NewString(value);
 	Replaceall(strvalue, "\\\"", "\"");
-
 	if (Strcmp(code, "imclassbase") == 0) {
 	  Delete(m3raw_baseclass);
 	  m3raw_baseclass = Copy(strvalue);
@@ -2536,8 +2348,6 @@ MODULA3():
   }
 
   void Setfeature(Node *n, const char *feature, const String *value, bool warn = false) {
-
-    //dbg("tag feature <%s> with value <%s>\n", feature, Char(value));
     String *attr = NewStringf("feature:%s", feature);
     if ((Setattr(n, attr, value) != 0) && warn) {
       Swig_warning(WARN_MODULA3_BAD_ENUMERATION, input_file, line_number, "Feature <%s> of %s did already exist.\n", feature, Getattr(n, "name"));
@@ -2546,8 +2356,6 @@ MODULA3():
   }
 
   String *Getfeature(Node *n, const char *feature) {
-
-    //dbg("retrieve feature <%s> with value <%s>\n", feature, Char(value));
     String *attr = NewStringf("feature:%s", feature);
     String *result = Getattr(n, attr);
     Delete(attr);
@@ -2555,7 +2363,6 @@ MODULA3():
   }
 
   bool convertInt(long in, long &out, const String *mode) {
-
     if ((mode == NIL) || (Strcmp(mode, "int:int") == 0) || (Strcmp(mode, "set:set") == 0)) {
       out = in;
       return true;
@@ -2571,37 +2378,27 @@ MODULA3():
   }
 
 /*
-  so we maybe create a list of the enum labels and their values from the
+  so we have created a list of the enum labels and their values from the
   enumvalue and enumvaluex and at the end it is a proper enum if the
-  firts elt is value 0 and the last is the value of the count of enums
-  and we construct a type with the list otherwise it is an improper
+  first elt is value 0 and the last is the value of the count of enums
+  and we construct a type with the list, otherwise it is an improper
   enum and we construct consts for all the enum labs with their values.
   and then a var initialisation in a proc and a runtime check before the
-  low call. and maybe construct a typemap to be acted uplon later to
+  low call. and construct a typemap to be acted upon later to
   change the type of the parm.
-
-
 */
-
-
   void ReplaceEnumVals(Hash *hash,String *s,String *className) {
-
-    //dbg("ReplaceEnumVals start \n");
 
     //just check the local enums hash first
     for (Iterator el = First(hash); el.item != NIL; el = Next(el)) {
       String *name = NewString(el.key);
       String *value = NewString(el.item);
 
-      //dbg("ReplaceEnumVals s %s name %s value %s \n",Char(s),Char(name),Char(value));
-
       if (Strcmp(s,name) == 0) {
         Replaceall(s, name, value);
         return;
       }
     }
-
-//DebugEnums();
 
     //Check if string contains any names with class prefixes in which case do
     //the full enum search from the global hash table
@@ -2615,9 +2412,8 @@ MODULA3():
     //enum hash enum_coll - which assumes collectEnumerations has been run
     //This needs rework since if we had regular expressions we could just chop off
     //all classname prefixes not just the one in which the enum is defined.
-    //Also we could probably get away with not calling collectEnumerations2 and
+    //Also we could probably get away with not calling collectEnumerations and
     //collect all the enums in enumDeclaration
-    //see regex code above
 
     if (className != NIL) {
       String *cname = NewStringf("%s::",className);
@@ -2630,59 +2426,45 @@ MODULA3():
 
       String *proper = Getattr(h,"proper");
       List *enumList = Getattr(h,"order");
-
-//      dbg("min %s max %s proper %s\n",Char(min),Char(max),Char(proper));
-
       Hash *theEnums = Getattr(h,"enums");
 
       //the proper enums translate directly to M3 ones
       if (proper) {
 
-          //random order
+        //random order
         for (Iterator el = First(theEnums); el.item != NIL; el = Next(el)) {
           String *name = NewString(el.key);
           String *value = NewString(el.item);
 
           //dont need to replace proper ones do we ??
           Replaceall(s, name, value);
-
-         //dbg("hashes proper name %s : value %s\n",Char(name),Char(value));
        }
-
       } else {
         //improper enums
-
         for (Iterator el = First(enumList); el.item != NIL; el = Next(el)) {
           String *name = NewString(el.item);
           String *value = Getattr(theEnums,name);
 
           Replaceall(s, name, value);
-
-          //dbg("replace in %s name %s : value %s\n",Char(s),Char(name),Char(value));
         }
-
       }
     }
   }
 
 
   void collectEnumerations(Hash *enums, Node *n) {
-
     Node *child = firstChild(n);
     while (child != NIL) {
       String *name = Getattr(child, "name");
       const bool isConstant = Strcmp(nodeType(child), "constant") == 0;
       const bool isEnumItem = Strcmp(nodeType(child), "enumitem") == 0;
       if (isConstant || isEnumItem) {
-
-        //dbg("%s%s name %s\n", isConstant?"constant":"", isEnumItem?"enumitem":"", Char(name));
 	{
 	  String *m3name = Getfeature(child, "modula3:enumitem:name");
 	  String *m3enum = Getfeature(child, "modula3:enumitem:enum");
 	  String *conv = Getfeature(child, "modula3:enumitem:conv");
 
 	  if (m3enum != NIL) {
-
 	    if (m3name == NIL) {
 	      m3name = name;
 	    }
@@ -2690,7 +2472,6 @@ MODULA3():
 	    long max = -1;
 	    Hash *items;
 	    Hash *enumnode = Getattr(enums, m3enum);
-
 	    if (enumnode == NIL) {
 	      enumnode = NewHash();
 	      items = NewHash();
@@ -2705,7 +2486,6 @@ MODULA3():
 	    }
 	    long numvalue;
 	    String *value = Getattr(child, "value");
-
 	    if ((value == NIL) || (!strToL(value, numvalue))) {
 	      value = Getattr(child, "enumvalue");
 	      if ((value == NIL) || (!evalExpr(value, numvalue))) {
@@ -2719,7 +2499,6 @@ MODULA3():
 	      if (oldname != NIL) {
 		Swig_warning(WARN_MODULA3_BAD_ENUMERATION, input_file, line_number, "The value <%s> is already assigned to <%s>.\n", value, oldname);
 	      }
-              //dbg("items %lx, set %s = %s\n", (long) items, Char(newvalue), Char(m3name));
 	      Setattr(items, newvalue, m3name);
 	      if (max < numvalue) {
 		max = numvalue;
@@ -2742,7 +2521,6 @@ MODULA3():
   };
 
   void tagConstants(Node *first, String *parentEnum, const const_id_pattern & pat, const String *pragma, List *convdesc) {
-
     Node *n = first;
     while (n != NIL) {
       String *name = getQualifiedName(n);
@@ -2757,7 +2535,6 @@ MODULA3():
           ( (pat.parentEnum == NIL) ||
             ((parentEnum != NIL)  &&  (isParent)))
          ) {
-	//dbg("tag %s\n", Char(name));
 	String *srctype = Getitem(convdesc, 1);
 	String *relationstr = Getitem(convdesc, 3);
 	List *relationdesc = Split(relationstr, ',', 2);
@@ -2766,14 +2543,12 @@ MODULA3():
 	String *srcstyle = NIL;
 	String *newprefix = NIL;
 	{
-	  //dbg("name conversion <%s>\n", Char(Getitem(convdesc,2)));
 	  List *namedesc = Split(Getitem(convdesc, 2), ',', INT_MAX);
 	  Iterator nameit = First(namedesc);
 	  for (; nameit.item != NIL; nameit = Next(nameit)) {
 	    List *nameassign = Split(nameit.item, '=', 2);
 	    String *tag = Getitem(nameassign, 0);
 	    String *data = Getitem(nameassign, 1);
-	    //dbg("name conv <%s> = <%s>\n", Char(tag), Char(data));
 	    if (Strcmp(tag, "srcstyle") == 0) {
 	      srcstyle = Copy(data);
 	    } else if (Strcmp(tag, "prefix") == 0) {
@@ -2787,7 +2562,6 @@ MODULA3():
 	}
 	const char *stem = Char(name);
 	if (pat.prefix != NIL) {
-	  //dbg("pat.prefix %s for %s\n", Char(pat.prefix), Char(name));
 	  stem += Len(pat.prefix);
 	}
 	String *newname;
@@ -2840,7 +2614,6 @@ MODULA3():
       }
 
       if (Strcmp(nodeType(n), "enum") == 0) {
-	//dbg("explore enum %s, qualification %s\n", Char(name), Char(Swig_symbol_qualified(n)));
 	tagConstants(firstChild(n), name, pat, pragma, convdesc);
       } else {
 	tagConstants(firstChild(n), NIL, pat, pragma, convdesc);
@@ -2850,7 +2623,6 @@ MODULA3():
   }
 
   void scanForConstPragmas(Node *n) {
-
     Node *child = firstChild(n);
     while (child != NIL) {
       const String *type = nodeType(child);
@@ -2903,15 +2675,11 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void emitProxyClassDefAndCPPCasts(Node *n) {
-
     String *c_classname = SwigType_namestr(Getattr(n, "name"));
     String *c_baseclass = NULL;
     String *baseclass = NULL;
     String *c_baseclassname = NULL;
-    //this tmap gone in 2.10
-    //String *classDeclarationName = Getattr(n, "classDeclaration:name");
     String *classDeclarationName = Getattr(n, "name");
-//printAttrs(n);
 
     /* Deal with inheritance */
     List *baselist = Getattr(n, "bases");
@@ -3037,7 +2805,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   String *getAttrString(Node *n, const char *attr) {
-
     String *str = Getattr(n, attr);
     if (str == NIL) {
       str = NewString("");
@@ -3055,7 +2822,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   String *getMethodDeclarations(Node *n) {
-
     String *acc_str = Getattr(n, "access");
     String *methodattr;
     if (acc_str == NIL) {
@@ -3144,7 +2910,6 @@ MODULA3():
 	Delete(entries);
 
       } else if (Cmp(kind, "class") == 0) {
-
 	enum access_privilege { acc_public, acc_protected, acc_private };
 	int max_acc = acc_public;
 
@@ -3200,16 +2965,6 @@ MODULA3():
 
 	//fix class which has no methods
 	superclass = NewStringf("%sPublic", proxy_class_name);
-	/*
-	if (hasContent(methods[acc_public])) {
-	  superclass = NewStringf("%sPublic", proxy_class_name);
-	} else if (hasContent(baseclassname)) {
-	  superclass = Copy(baseclassname);
-	} else {
-	  superclass = NewString("ROOT");
-	}
-	*/
-
 	Printf(m3wrap_intf.f, "%s <: %s;\n", proxy_class_name, superclass);
 	Delete(superclass);
 
@@ -3297,14 +3052,11 @@ MODULA3():
     return SWIG_OK;
   }
 
-
   /* ----------------------------------------------------------------------
    * memberfunctionHandler()
    * ---------------------------------------------------------------------- */
 
   virtual int memberfunctionHandler(Node *n) {
-
-    //dbg("memberfunctionHandler(%s)\n", Char(Getattr(n,"name")));
     Setattr(n, "modula3:functype", "method");
     Language::memberfunctionHandler(n);
 
@@ -3330,31 +3082,15 @@ MODULA3():
       if (Strcmp(oname,"0") != 0) {
         methodname = NewStringf("%s%s",methodname,oname);
       }
-/*
-      if (methodname==NIL) {
-        methodname = Getattr(n,"name");
-      }
-*/
       String *arguments = createM3Signature(n);
-
       String *storage = Getattr(n, "storage");
-      //this attr does not have any effect
-      //String *overridden = Getattr(n, "override");
-      //bool isVirtual = (storage != NIL) && (Strcmp(storage, "virtual") == 0);
-      //bool isOverridden = (overridden != NIL)
-      // && (Strcmp(overridden, "1") == 0);
       String *abstract = Getattr(n, "abstract");
-
-      //dbg("memberfunctionHandler storage %s abstract %s method %s\n",Char(storage),Char(abstract),Char(methodname));
-
       String *comment = NewString("");
       Printf(comment,"%s%s",abstract ? "abstract" : "",storage ? " virtual" : "");
       if (Len(comment) > 0) comment = NewStringf("  (* %s *)",comment);
 
       //dont implement abstract methods since cannot call them
       //they must be overriden in subclasses
-
-      //if (!(isVirtual && isOverridden)) {
       if (!abstract) {
 	{
           int num_exceptions = 0;
@@ -3376,8 +3112,6 @@ MODULA3():
 
           String *throws = NewString("");
           generateThrowsClause(throws_hash, throws);
-
-          //dbg("throws %s\n",Char(throws));
 
 	  String *thisMethod = NewString("");
 	  Printf(thisMethod, "%s(%s)%s%s%s;%s\n",
@@ -3418,7 +3152,6 @@ MODULA3():
       proxyClassFunctionHandler(n);
       Delete(overloaded_name);
     }
-    //dbg("end memberfunctionHandler(%s)\n", Char(Getattr(n,"name")));
     return SWIG_OK;
   }
 
@@ -3427,8 +3160,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int staticmemberfunctionHandler(Node *n) {
-
-    //dbg("staticmemberfunctionHandler(%s)\n", Char(Getattr(n,"name")));
 
     static_flag = true;
     Language::staticmemberfunctionHandler(n);
@@ -3458,7 +3189,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void proxyClassFunctionHandler(Node *n) {
-
     SwigType *t = Getattr(n, "type");
     ParmList *l = Getattr(n, "parms");
     Hash *throws_hash = NewHash();
@@ -3631,10 +3361,7 @@ MODULA3():
 
     Hash *throws_hash = NewHash();
     ParmList *l = Getattr(n, "parms");
-
-    //String *className = Getattr(n, "sym:name"); //was Getattr(n, "name");
-    String *className = Getattr(n, "name"); //fixes part of prob
-    //dbg("constructorHandler(%s)\n", Char(className));
+    String *className = Getattr(n, "name"); 
 
     //may be the fix to renames and templates
     String *consSymName = Getattr(n,"constructorDeclaration:sym:name");
@@ -3646,28 +3373,22 @@ MODULA3():
     bool isTemplate = false;
 
     if (Strstr(className,"<") && Strstr(className,">") ) {
-      //dbg("constructorHandler template (%s)\n", Char(className));
       isTemplate = true;
     }
 //if name has something like *<(*)> in it then we probably know
 //its a template and is not going to be renamed. Is that even possible
 //renaming an overloaded template constructor??
-//printAttrs(n); List<(int)> or test existance of code attr
 
-    //dbg("constructorHandler classname(%s) sname(%s) oname(%s) consSymName(%s)\n", Char(className), Char(sname), Char(oname), Char(consSymName));
-
-    //maybe compare sname to consSymName not classname
+    //lets compare sname to consSymName not classname
     bool constrRenamed = (Strcmp(sname,className) != 0);
 
     if (constrRenamed) {
       String *overrides = getAttrString(parentNode(n), "modula3:override");
       Printf(overrides, "%s := New_%s;\n", sname,sname);
-      //dbg("constructorHandler HAS renamed oname(%s)\n", Char(overrides));
     } else {
       //default case create an init  name
       String *overrides = getAttrString(parentNode(n), "modula3:override");
       Printf(overrides, "init_%s := New_%s%s;\n", oname,sname,oname);
-      //dbg("constructorHandler NOT renamed oname(%s)\n", Char(overrides));
     }
 
     // this invokes functionWrapper
@@ -3675,7 +3396,6 @@ MODULA3():
 
     //Remove the first "self" parameter of the arg list terminated by ;
     String *consArgs = getAttrString(n, "m3consargs");
-    //dbg("constructorHandler consargs(%s)\n", Char(consArgs));
 
     char *semi = strchr(Char(consArgs), ';');
     String *tmpArgs = NewString(semi + 1);
@@ -3710,11 +3430,9 @@ MODULA3():
 
     } else if (constrRenamed) {
       Printf(classOver, "%s (%s) : %s%s;\n", sname, tmpArgs, className,throws);
-      //dbg("constructorHandler HAS renamed classOver(%s)\n", Char(classOver));
     } else {
       //default case use init name
       Printf(classOver, "init_%s (%s) : %s%s;\n", oname, tmpArgs, className,throws);
-      //dbg("constructorHandler NOT renamed classOver(%s)\n", Char(classOver));
     }
 
     if (proxy_flag) {
@@ -3814,7 +3532,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int destructorHandler(Node *n) {
-
     Language::destructorHandler(n);
     String *symname = Getattr(n, "sym:name");
 
@@ -3829,8 +3546,6 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int membervariableHandler(Node *n) {
-
-    //dbg("membervariableHandler(%s)\n", Char(Getattr(n,"name")));
     SwigType *t = Getattr(n, "type");
     String *tm;
 
@@ -3840,7 +3555,6 @@ MODULA3():
     }
 
     variable_name = Getattr(n, "sym:name");
-    //dbg("member variable: %s\n", Char(variable_name));
 
     // Output the property's field declaration and accessor methods
     Printf(proxy_class_code, "  public %s %s {", tm, variable_name);
@@ -3887,7 +3601,6 @@ MODULA3():
       }
       Delete(m3name);
     }
-    //dbg("end membervariableHandler(%s)\n", Char(Getattr(n,"name")));
 
     return SWIG_OK;
   }
@@ -3929,14 +3642,10 @@ MODULA3():
    * ---------------------------------------------------------------------- */
 
   virtual int memberconstantHandler(Node *n) {
-
-    //dbg("memberconstantHandler\n");
-
     variable_name = Getattr(n, "sym:name");
     wrapping_member_flag = true;
     Language::memberconstantHandler(n);
     wrapping_member_flag = false;
-
     return SWIG_OK;
   }
 
@@ -3945,7 +3654,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   String *getOverloadedName(Node *n) {
-
     String *overloaded_name = Copy(Getattr(n, "sym:name"));
 
     if (Getattr(n, "sym:overloaded")) {
@@ -3961,7 +3669,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void emitM3Wrapper(Node *n, const String *func_name) {
-
     SwigType *t = Getattr(n, "type");
     ParmList *l = Getattr(n, "parms");
     Hash *throws_hash = NewHash();
@@ -3984,7 +3691,6 @@ MODULA3():
     String *staticMember = Getattr(n, "staticmemberfunctionHandler:storage");
     /*several names for the same function */
     String *raw_name = Getattr(n, "name");	/*original C function name */
-    //String *func_name = Getattr(n,"sym:name");  /*final Modula3 name chosen by the user*/
     bool setter_flag = false;
     int multiretval = GetFlag(n, "feature:modula3:multiretval");
 
@@ -4053,7 +3759,6 @@ MODULA3():
     bool has_return_m3 = hasContent(result_m3wraptype);
     if (has_return_m3) {
       num_returns++;
-      //dbg("%s: %s\n", Char(func_name),Char(result_m3wraptype));
     }
 
     String *arguments = createM3Signature(n);
@@ -4062,17 +3767,9 @@ MODULA3():
 
     if (Strcmp(type, "constructor") == 0) {
       Setattr(n,"m3consargs",arguments);
-
-      //String *conStrName = Getattr(n,"constructorHandler:sym:name");
-      //String *conStrDeclName = Getattr(n,"constructorDeclaration:sym:name");
-//printAttrs(n);
-      //String *selfArgs = NewStringf("self:%s;",raw_name); //was conStrName
       //It makes sense that the type of the self is the same as the type returned
       String *selfArgs = NewStringf("self:%s;",result_m3wraptype); //was rawName
-
       Push(arguments,selfArgs);
-      //dbg("emitm3wrapper(%s)\n", Char(selfArgs));
-      //dbg("emitm3wrapper rawName(%s) constHandlerSymName(%s) constrDeclarationSymName(%s) result_wraptype(%s)\n", Char(raw_name),Char(conStrName),Char(conStrDeclName),Char(result_m3wraptype));
     }
 
     /* Create local variables or RECORD fields for return values
@@ -4137,8 +3834,6 @@ MODULA3():
 
 	String *tm = Getattr(p, "tmap:m3wrapenumcheck");
 	if (tm != NIL) {
-          //dbg("m3wrapenumcheck %s %s\n",Char(tm),Char(arg));
-
           Hash *enumHash = Getattr(enum_coll,tm);
           if (enumHash != NIL) {
 
@@ -4147,8 +3842,6 @@ MODULA3():
 
               //the constant we check against
               String *errConst = Getattr(enumHash,"errconst");
-              //dbg("errconst %s\n",Char(errConst));
-
               String *useSet = Getattr(enumHash,"useSet");
 
               String *runCheck;
@@ -4197,12 +3890,7 @@ MODULA3():
     {
       String *tm = getMappedTypeNew(n, "m3wrapretvar", "", false);
       if (tm != NIL) {
-         //this generates a spurious import in the safe interface
-         //for Ctypes but it may be necessary for other tmaps?? put back in if problems
-         //!!!Certainly were! problem is now missing heaps of imports in interfaces
-         //maybe a way to avoid the spurious import some other way eg
-         //m3wratretvar:interfaceonly etc
-         	  //in some cases we only want the import in the implementation
+	  //in some cases we only want the import in the implementation
 	  //in which case add impleonly="1" to the m3wrapintype tmap
 	String *implOnly = Getattr(n, "tmap:m3wrapintype:impleonly");
 	if (!implOnly) {
@@ -4341,9 +4029,9 @@ MODULA3():
 	//statcheck here we cope with a static method allocating a new base/class type
 	//and returning it. If the tmap is NOT for a static method and statcheck exists then
 	//remove any comments - kludge to allow accees to the self var for non static methods
+	//fixme - the statcheck is not really needed 
         String *staticTmap = Getattr(n, "tmap:m3wrapretcheck:statcheck");
         if ((staticMember == NIL) && (staticTmap != NIL)) {
-          //dbg("emitm3wrapper statcheck (%s)\n", Char(staticTmap));
           Replaceall(tm, "(*", ""); //remove m3 comments
           Replaceall(tm, "*)", ""); //remove m3 comments
         }
@@ -4382,7 +4070,6 @@ MODULA3():
 	  String *outarg = Getattr(p, "m3outarg");
 	  //trim spaces and check if anything in the tmap
 	  Chop(tm);
-          //dbg("emitm3wrapper m3wrapoutconv tm(%s)\n", Char(tm));
           if (hasContent(tm)) {
 	    addImports(m3wrap_impl.import, "m3wrapoutconv", n);
 	    num_exceptions += addThrows(throws_hash, "m3wrapoutconv", p);
@@ -4470,7 +4157,6 @@ MODULA3():
 	}
       }
     }
-
     /* Create procedure header */
     {
       String *header = NewStringf("PROCEDURE %s (%s)",
@@ -4479,17 +4165,12 @@ MODULA3():
       if ((num_returns > 0) || multiretval) {
 	Printf(header, ": %s", result_m3wraptype);
       }
-
       generateThrowsClause(throws_hash, header);
 
       Append(function_code, header);
 
       String *type = nodeType(n);
       String *funcType = Getattr(n, "modula3:functype");
-
-//String *staticName = Getattr(n,"staticmemberfunctionHandler:sym:name");
-//dbg("emitM3Wrapper functype %s func_name %s static %s staticname %s type %s\n", Char(funcType), Char(func_name), Char(staticMember),Char(staticName),Char(type));
-
       //Here we output the interface procedure
       //functype is null or method we dont output methods theyre done in classes
       //so anything thats cdecl is ok that includes statics but not constructs or destructors
@@ -4525,9 +4206,7 @@ MODULA3():
 
     m3wrap_impl.enterBlock(no_block);
     if (proxy_flag && global_variable_flag) {
-
-          setter_flag = (Cmp(Getattr(n, "sym:name"), Swig_name_set(NSPACE_TODO, variable_name)) == 0);
-
+      setter_flag = (Cmp(Getattr(n, "sym:name"), Swig_name_set(NSPACE_TODO, variable_name)) == 0);
       // Properties
       if (setter_flag) {
 	// Setter method
@@ -4609,7 +4288,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   bool substituteClassname(SwigType *pt, String *tm) {
-
     bool substitution_performed = false;
     if (Strstr(tm, "$m3classname") || Strstr(tm, "$&m3classname")) {
       String *classname = getProxyName(pt);
@@ -4665,8 +4343,6 @@ MODULA3():
 						    arg_num) : Copy(Getattr(p,
 									    "name"));
 
-//dbg("newname %s\n",Char(arg));
-
     return arg;
   }
 
@@ -4685,7 +4361,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void attachParameterNames(Node *n, const char *tmid, const char *nameid, const char *fmt) {
-
     /* Use C parameter name if present and unique,
        otherwise create an 'arg%d' name */
     Hash *hash = NewHash();
@@ -4706,7 +4381,6 @@ MODULA3():
 	Swig_warning(WARN_MODULA3_DOUBLE_ID, input_file, line_number, "Argument '%s' twice.\n", newname);
       }
       Setattr(p, nameid, newname);
-
       p = nextSibling(p);
       count++;
     }
@@ -4722,7 +4396,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   String *createM3Signature(Node *n) {
-
     String *arguments = NewString("");
     Parm *p = skipIgnored(Getattr(n, "parms"), "m3wrapintype");
     writeArgState state;
@@ -4743,10 +4416,7 @@ MODULA3():
 	  String *deflt = Getattr(p, "tmap:m3wrapindefault");
 	  String *arg = Getattr(p, "autoname");
 	  SwigType *pt = Getattr(p, "type");
-
 	  substituteClassname(pt, tm);	/* do we need this ? */
-//dbg("createM3Signature arg %s parmtype %s typemap %s\n", Char(arg),Char(pt),Char(tm));
-
 	  writeArg(arguments, state, mode, arg, tm, deflt);
 	}
 	p = skipIgnored(Getattr(p, "tmap:m3wrapintype:next"), "m3wrapintype");
@@ -4789,9 +4459,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void emitTypeWrapperClass(String *classname, SwigType *type) {
-
-//dbg("emitTypeWrapperClass classname %s\n", Char(classname));
-
     Node *n = NewHash();
     Setfile(n, input_file);
     Setline(n, line_number);
@@ -4843,9 +4510,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   const String *typemapLookup(Node *n, const_String_or_char_ptr tmap_method, SwigType *type, int warning, Node *typemap_attributes = 0) {
-
-//dbg("typemapLookup type%s method %s\n", Char(type),Char(tmap_method));
-
     Node *node = !typemap_attributes ? NewHash() : typemap_attributes;
     Setattr(node, "type", type);
     Setfile(node, Getfile(n));
@@ -4869,7 +4533,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   int addThrows(Hash *throws_hash, const String *typemap, Node *parameter) {
-
     // Get the comma separated throws clause - held in "throws" attribute in the typemap passed in
     int len = 0;
     String *throws_attribute = NewStringf("%s:throws", typemap);
@@ -4878,7 +4541,6 @@ MODULA3():
     addImports(m3wrap_impl.import, throws_attribute, parameter);
 
     String *throws = getMappedTypeNew(parameter, Char(throws_attribute), "", false);
-    //dbg("got exceptions %s for %s\n", Char(throws), Char(throws_attribute));
 
     if (throws) {
       // Put the exception classes in the throws clause into a temporary List
@@ -4896,7 +4558,6 @@ MODULA3():
 	    SwigType *pt = Getattr(parameter, "type");
 	    substituteClassname(pt, exception_class);
 	    // Don't duplicate the exception class in the throws clause
-	    //dbg("add exception %s\n", Char(exception_class));
 	    Setattr(throws_hash, exception_class, "1");
 	  }
 	  Delete(exception_class);
@@ -4913,7 +4574,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void generateThrowsClause(Hash *throws_hash, String *code) {
-
     // Add the throws clause into code
     if (Len(throws_hash) > 0) {
       Iterator cls = First(throws_hash);
@@ -4984,7 +4644,6 @@ MODULA3():
 
 
   void addImports(Hash *imports_hash, const String *typemap, Node *node) {
-
     // Get the comma separated imports clause - held in "imports" attribute in the typemap passed in
     String *imports_attribute = NewStringf("%s:import", typemap);
     String *imports = getMappedTypeNew(node, Char(imports_attribute), "", false);
@@ -4992,7 +4651,6 @@ MODULA3():
     if (imports) {
 
       List *import_list = Split(imports, ',', INT_MAX);
-      //dbg("addImports %s for %s\n", Char(typemap), Char(imports));
       // Add the import classes to the node imports list, but don't duplicate if already in list
       if (import_list) {
 
@@ -5000,7 +4658,6 @@ MODULA3():
 
 	  Chop(imp.item); //remove trailing space before split
 	  addImportsSub(imports_hash,imp.item);
-
 	}
       }
     }
@@ -5011,7 +4668,6 @@ MODULA3():
    * ----------------------------------------------------------------------------- */
 
   void emitImportStatements(Hash *imports_hash, String *code) {
-
     // Add the imports statements into code
     Printf(code, "\n");
 
@@ -5062,14 +4718,12 @@ MODULA3():
         } else {
             //dont need this anymore after fixing import raw
             //Printf(code, "IMPORT %s;\n", modName);
-            //dbg("emitImports %s \n", Char(mainIter.item));
         }
 
       }
       mainIter = Next(mainIter);
     }
   }
-
 
 };				/* class MODULA3 */
 
