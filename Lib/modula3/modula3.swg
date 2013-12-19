@@ -344,6 +344,23 @@
 %typemap(m3wrapouttype)        SWIGTYPE & "$1_basetype"
 %typemap(m3wraprettype)        SWIGTYPE & "UNTRACED REF $1_basetype"
 
+%typemap(ctype)                SWIGTYPE && "$1_type"
+%typemap(m3rawtype)      const SWIGTYPE && "UNTRACED REF $1_basetype"
+%typemap(m3rawtype)            SWIGTYPE && "UNTRACED REF $1_basetype"
+%typemap(m3rawintype)    const SWIGTYPE && "$1_basetype"
+%typemap(m3rawinmode)    const SWIGTYPE && "READONLY"
+%typemap(m3rawintype)          SWIGTYPE && "$1_basetype"
+%typemap(m3rawinmode)          SWIGTYPE && "VAR"
+%typemap(m3rawrettype)   const SWIGTYPE && "UNTRACED REF $1_basetype"
+%typemap(m3rawrettype)         SWIGTYPE && "UNTRACED REF $1_basetype"
+%typemap(m3wraptype)           SWIGTYPE && "$1_basetype"
+%typemap(m3wrapintype)   const SWIGTYPE && "$1_basetype"
+%typemap(m3wrapinmode)   const SWIGTYPE && "READONLY"
+%typemap(m3wrapintype)         SWIGTYPE && "$1_basetype"
+%typemap(m3wrapinmode)         SWIGTYPE && "VAR"
+%typemap(m3wrapouttype)        SWIGTYPE && "$1_basetype"
+%typemap(m3wraprettype)        SWIGTYPE && "UNTRACED REF $1_basetype"
+
 %typemap(ctype)           enum SWIGTYPE "$1_type"
 %typemap(m3rawtype)       enum SWIGTYPE "C.int"
 %typemap(m3rawintype)     enum SWIGTYPE "C.int (* $1_type *)"
@@ -470,12 +487,18 @@ $1 = &temp; %}
 /*
 if(!$1) {
     //SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "$1_type reference is null");
-    //RETURN $null;
-    return $null;
+   RETURN $null;
   }
 */
 %}
-%typemap(out) SWIGTYPE *, SWIGTYPE &, SWIGTYPE (CLASS::*) %{ *($&1_ltype)&$result = $1; %}
+
+%typemap(in) SWIGTYPE && %{ $1 = *($&1_ltype)&$input;
+  if(!$1) {
+    //SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "$1_type reference is null");
+    RETURN $null;
+  } %}
+
+%typemap(out) SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE (CLASS::*) %{ *($&1_ltype)&$result = $1; %} 
 
 
 /* Default array handling */
@@ -556,9 +579,10 @@ if(!$1) {
     ""
 
 %typecheck(SWIG_TYPECHECK_POINTER) /* Default */
-    SWIGTYPE,
-    SWIGTYPE *,
-    SWIGTYPE &,
+    SWIGTYPE, 
+    SWIGTYPE *, 
+    SWIGTYPE &, 
+    SWIGTYPE &&, 
     SWIGTYPE [],
     SWIGTYPE (CLASS::*)
     ""
@@ -612,7 +636,7 @@ if(!$1) {
                  enum SWIGTYPE
     "$input"
 %typemap(m3in) SWIGTYPE "$&*1_type.getCPtr($input)"
-%typemap(m3in) SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) "$1_basetype.getCPtr($input)"
+%typemap(m3in) SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) "$1_basetype.getCPtr($input)"
 
 /* The m3out typemap is used for converting function return types from the return type
  * used in the PInvoke class to the type returned by the proxy, module or type wrapper class. */
@@ -643,13 +667,16 @@ if(!$1) {
 %typemap(m3out) SWIGTYPE & %{
     RETURN NEW($1_basetype, $imcall, $owner);
 %}
+%typemap(m3out) SWIGTYPE && %{
+    RETURN NEW($1_basetype, $imcall, $owner);
+%}
 %typemap(m3out) SWIGTYPE *, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
     cPtr := $imcall;
     RETURN (cPtr = IntPtr.Zero) ? null : NEW($1_basetype, cPtr, $owner);
 %}
 
 /* Properties */
-%typemap(m3varin) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+%typemap(m3varin) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
 PROCEDURE Set$var (value: $vartype) =
   BEGIN
     $imcall;
@@ -691,6 +718,10 @@ PROCEDURE Get$var (): $vartype =
     get {
       RETURN new $1_basetype($imcall, $owner);
     } %}
+%typemap(m3varout) SWIGTYPE && %{
+    get {
+      RETURN new $1_basetype($imcall, $owner);
+    } %}
 %typemap(m3varout) SWIGTYPE *, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
     get {
       IntPtr cPtr = $imcall;
@@ -698,13 +729,13 @@ PROCEDURE Get$var (): $vartype =
     } %}
 
 /* Typemaps used for the generation of proxy and type wrapper class code */
-%typemap(m3base)                      SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
-%typemap(m3classmodifiers)            SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) "public"
-%typemap(m3code)                      SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
-%typemap(m3imports)                   SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) "using System;"
+%typemap(m3base)                      SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
+%typemap(m3classmodifiers)            SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) "public"
+%typemap(m3code)                      SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
+%typemap(m3imports)                   SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) "using System;"
 %typemap(m3interfaces)                SWIGTYPE "IDisposable"
-%typemap(m3interfaces_derived)                  SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
-%typemap(m3ptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) "internal"
+%typemap(m3interfaces_derived)                  SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) ""
+%typemap(m3ptrconstructormodifiers) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) "internal"
 
 %typemap(m3finalize) SWIGTYPE %{
   ~$1_basetype() {
@@ -731,7 +762,7 @@ PROCEDURE Get$var (): $vartype =
     base.Dispose();
   }
 
-%typemap(m3getcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
+%typemap(m3getcptr) SWIGTYPE, SWIGTYPE *, SWIGTYPE &, SWIGTYPE &&, SWIGTYPE [], SWIGTYPE (CLASS::*) %{
   internal static IntPtr getCPtr($1_basetype obj) {
     RETURN (obj == null) ? IntPtr.Zero : obj.swigCPtr;
   }
@@ -755,6 +786,7 @@ FROM BlaBla IMPORT Bla;
 
 /* Array reference typemaps */
 %apply SWIGTYPE & { SWIGTYPE ((&)[ANY]) }
+%apply SWIGTYPE && { SWIGTYPE ((&&)[ANY]) }
 
 /* const pointers */
 %apply SWIGTYPE * { SWIGTYPE *const }

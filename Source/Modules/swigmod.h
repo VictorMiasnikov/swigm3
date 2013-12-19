@@ -99,6 +99,7 @@ public:
   virtual int usingDeclaration(Node *n);
   virtual int namespaceDeclaration(Node *n);
   virtual int templateDeclaration(Node *n);
+  virtual int lambdaDeclaration(Node *n);
 
   enum AccessMode { PUBLIC, PRIVATE, PROTECTED };
 
@@ -215,7 +216,7 @@ public:
   virtual int addSymbol(const String *s, const Node *n, const_String_or_char_ptr scope = "");	/* Add symbol        */
   virtual void dumpSymbols();
   virtual Node *symbolLookup(String *s, const_String_or_char_ptr scope = "");			/* Symbol lookup     */
-  virtual Node *classLookup(const SwigType *s);	/* Class lookup      */
+  virtual Node *classLookup(const SwigType *s) const; /* Class lookup      */
   virtual Node *enumLookup(SwigType *s);	/* Enum lookup       */
   virtual int abstractClassTest(Node *n);	/* Is class really abstract? */
   virtual int is_assignable(Node *n);	/* Is variable assignable? */
@@ -296,9 +297,22 @@ protected:
   /* Some language modules require additional wrappers for virtual methods not declared in sub-classes */
   virtual bool extraDirectorProtectedCPPMethodsRequired() const;
 
+public:
+  /* Does target language support nested classes? Default is 'false'. If 'false' is returned, then
+    %rename("$ignore", %$isnested) statement will be issued at the top, and the nested classes
+    will be ignored. Note that even if the target language does not support the notion of class
+    nesting, the language module may nevertheless return true from this function, and use
+    %feature "flatnested" to move nested classes to the global scope, instead of ignoring them.
+  */
+  virtual bool nestedClassesSupported() const;
+
+protected:
   /* Identifies if a protected members that are generated when the allprotected option is used.
      This does not include protected virtual methods as they are turned on with the dirprot option. */
   bool isNonVirtualProtectedAccess(Node *n) const;
+
+  /* Identify if a wrapped global or member variable n should use the naturalvar feature */
+  int use_naturalvar_mode(Node *n) const;
 
   /* Director subclass comparison test */
   String *none_comparison;
@@ -380,7 +394,6 @@ int is_protected(Node *n);
 int is_member_director(Node *parentnode, Node *member);
 int is_member_director(Node *member);
 int is_non_virtual_protected_access(Node *n); /* Check if the non-virtual protected members are required (for directors) */
-int use_naturalvar_mode(Node *n);
 
 void Wrapper_virtual_elimination_mode_set(int);
 void Wrapper_fast_dispatch_mode_set(int);
@@ -407,5 +420,7 @@ int Swig_contract_mode_get();
 void Swig_browser(Node *n, int);
 void Swig_default_allocators(Node *n);
 void Swig_process_types(Node *n);
+void Swig_nested_process_classes(Node *n);
+void Swig_nested_name_unnamed_c_structs(Node *n);
 
 #endif

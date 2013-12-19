@@ -1282,6 +1282,8 @@ int SwigType_type(const SwigType *t) {
   if (strncmp(c, "p.", 2) == 0) {
     if (SwigType_type(c + 2) == T_CHAR)
       return T_STRING;
+    else if (SwigType_type(c + 2) == T_WCHAR)
+      return T_WSTRING;
     else
       return T_POINTER;
   }
@@ -1289,6 +1291,8 @@ int SwigType_type(const SwigType *t) {
     return T_ARRAY;
   if (strncmp(c, "r.", 2) == 0)
     return T_REFERENCE;
+  if (strncmp(c, "z.", 2) == 0)
+    return T_RVALUE_REFERENCE;
   if (strncmp(c, "m(", 2) == 0)
     return T_MPOINTER;
   if (strncmp(c, "q(", 2) == 0) {
@@ -1322,6 +1326,8 @@ int SwigType_type(const SwigType *t) {
     return T_SCHAR;
   if (strcmp(c, "unsigned char") == 0)
     return T_UCHAR;
+  if (strcmp(c, "wchar_t") == 0)
+    return T_WCHAR;
   if (strcmp(c, "float") == 0)
     return T_FLOAT;
   if (strcmp(c, "double") == 0)
@@ -1344,6 +1350,8 @@ int SwigType_type(const SwigType *t) {
     return T_ULONGLONG;
   if (strncmp(c, "enum ", 5) == 0)
     return T_INT;
+  if (strcmp(c, "auto") == 0)
+    return T_AUTO;
 
   if (strcmp(c, "v(...)") == 0)
     return T_VARARGS;
@@ -1373,13 +1381,13 @@ int SwigType_type(const SwigType *t) {
  *
  *  2.- swig doesn't mark 'type' as non-assignable.
  *
- *  3.- the user specify that the value wrapper is not needed by using
- *      the %feature("novaluewrapper"), in that case the user need to type
+ *  3.- the user specifies that the value wrapper is not needed by using
+ *      %feature("novaluewrapper") like so:
  *
  *        %feature("novaluewrapper") MyOpaqueClass;
  *        class MyOpaqueClass;
  *
- * Users can also force the use of the value wrapper by using the
+ * The user can also force the use of the value wrapper with
  * %feature("valuewrapper").
  * ----------------------------------------------------------------------------- */
 
@@ -1619,6 +1627,11 @@ void SwigType_remember_clientdata(const SwigType *t, const_String_or_char_ptr cl
   if (SwigType_isreference(t)) {
     SwigType *tt = Copy(t);
     SwigType_del_reference(tt);
+    SwigType_add_pointer(tt);
+    SwigType_remember_clientdata(tt, clientdata);
+  } else if (SwigType_isrvalue_reference(t)) {
+    SwigType *tt = Copy(t);
+    SwigType_del_rvalue_reference(tt);
     SwigType_add_pointer(tt);
     SwigType_remember_clientdata(tt, clientdata);
   }
