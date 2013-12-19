@@ -5,6 +5,11 @@ See the RELEASENOTES file for a summary of changes in each release.
 Version 3.0.0 (in progress)
 ============================
 
+2013-12-19: petermckinna
+            [Modula3] Added missing support for enumerations. Added support for objects. 
+            Fixed out by one bug in anonymouse method name declaration. Added memory management 
+            support for M3 garbage collector.
+            
 2013-12-18: ianlancetaylor
 	    [Go] Don't require that Go environment variables be set
 	    when running examples or testsuite when using Go 1 or
